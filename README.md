@@ -1,10 +1,10 @@
-# Object Name Marker
+# Object Name Markers
+Object Name Marker allows named objects to be highlighted directly, without first marking them in-game.
 
-A RuneLite plugin that highlights scene objects globally by object name.
+## Features
+Highlight objects using configurable object names
+Object hull/outline highlights
+Tile highlights for tiles occupied by objects
+Optional tile highlight expansion radius (name:radius)
 
-Supports:
-
-- Object hull highlights
-- Object outline highlights
-- Tile highlights for tiles occupied by an object
-- Optional tile expansion radius
+_Note: Unlike other object markers plugins, which marks specific object instances at specific locations, Object Name Markers highlights all named game, wall, decorative, and ground objects that match the configured list_
