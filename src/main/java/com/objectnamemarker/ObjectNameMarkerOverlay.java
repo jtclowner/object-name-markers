@@ -25,6 +25,7 @@ import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
 import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
+import java.util.Comparator;
 
 class ObjectNameMarkerOverlay extends Overlay
 {
@@ -67,6 +68,7 @@ class ObjectNameMarkerOverlay extends Overlay
         WorldPoint playerLocation = localPlayer.getWorldLocation();
         Stroke stroke = new BasicStroke(1);
         List<TileObject> objects = new ArrayList<>(plugin.getObjects());
+        objects.sort(Comparator.comparingInt(object -> object.getWorldLocation().distanceTo(playerLocation)));
         int rendered = 0;
 
         for (TileObject object : objects)
