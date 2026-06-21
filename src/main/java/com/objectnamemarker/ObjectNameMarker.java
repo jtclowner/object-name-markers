@@ -1,10 +1,10 @@
-package com.objectidmarker;
+package com.objectnamemarker;
 
-class ObjectIdMarker
+class ObjectNameMarker
 {
     private final Integer radius;
 
-    ObjectIdMarker(Integer radius)
+    ObjectNameMarker(Integer radius)
     {
         this.radius = radius;
     }

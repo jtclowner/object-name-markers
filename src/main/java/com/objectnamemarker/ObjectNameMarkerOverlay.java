@@ -1,6 +1,7 @@
-package com.objectidmarker;
+package com.objectnamemarker;
 
 import java.awt.BasicStroke;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
@@ -25,21 +26,21 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
 import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
 
-class ObjectIdMarkerOverlay extends Overlay
+class ObjectNameMarkerOverlay extends Overlay
 {
     private static final int OUTLINE_WIDTH = 2;
     private static final int OUTLINE_FEATHER = 0;
 
     private final Client client;
-    private final ObjectIdMarkerPlugin plugin;
-    private final ObjectIdMarkerConfig config;
+    private final ObjectNameMarkerPlugin plugin;
+    private final ObjectNameMarkerConfig config;
     private final ModelOutlineRenderer modelOutlineRenderer;
 
     @Inject
-    private ObjectIdMarkerOverlay(
+    private ObjectNameMarkerOverlay(
             Client client,
-            ObjectIdMarkerPlugin plugin,
-            ObjectIdMarkerConfig config,
+            ObjectNameMarkerPlugin plugin,
+            ObjectNameMarkerConfig config,
             ModelOutlineRenderer modelOutlineRenderer
     )
     {
@@ -80,22 +81,28 @@ class ObjectIdMarkerOverlay extends Overlay
                 continue;
             }
 
-            int objectId = object.getId();
+            String objectName = plugin.getObjectName(object);
+
+            if (objectName.isEmpty())
+            {
+                continue;
+            }
+
             boolean renderedSomething = false;
 
-            if (plugin.getHullObjectIds().contains(objectId))
+            if (plugin.getHullObjectNames().contains(objectName))
             {
                 renderHull(graphics, object, stroke);
                 renderedSomething = true;
             }
 
-            if (plugin.getOutlineObjectIds().contains(objectId))
+            if (plugin.getOutlineObjectNames().contains(objectName))
             {
                 renderModelOutline(object);
                 renderedSomething = true;
             }
 
-            ObjectIdMarker tileMarker = plugin.getTileMarkers().get(objectId);
+            ObjectNameMarker tileMarker = plugin.getTileMarkers().get(objectName);
             if (tileMarker != null)
             {
                 int radius = tileMarker.getRadius() == null ? 0 : tileMarker.getRadius();
@@ -147,13 +154,7 @@ class ObjectIdMarkerOverlay extends Overlay
             return;
         }
 
-        OverlayUtil.renderPolygon(
-                graphics,
-                hull,
-                config.hullColor(),
-                config.hullColor(),
-                stroke
-        );
+        OverlayUtil.renderPolygon(graphics, hull, config.hullColor(), config.hullColor(), stroke);
     }
 
     private Shape getConvexHull(TileObject object)
@@ -201,34 +202,74 @@ class ObjectIdMarkerOverlay extends Overlay
                 object.getPlane()
         );
 
-        int minX = base.getX() - radius;
-        int minY = base.getY() - radius;
-        int maxX = base.getX() + object.sizeX() - 1 + radius;
-        int maxY = base.getY() + object.sizeY() - 1 + radius;
+        int objectMinX = base.getX();
+        int objectMinY = base.getY();
+        int objectMaxX = base.getX() + object.sizeX() - 1;
+        int objectMaxY = base.getY() + object.sizeY() - 1;
 
-        renderTileArea(graphics, minX, minY, maxX, maxY, object.getPlane(), stroke);
+        renderTileArea(
+                graphics,
+                objectMinX - radius,
+                objectMinY - radius,
+                objectMaxX + radius,
+                objectMaxY + radius,
+                objectMinX,
+                objectMinY,
+                objectMaxX,
+                objectMaxY,
+                object.sizeX(),
+                object.sizeY(),
+                object.getPlane(),
+                stroke
+        );
     }
 
     private void renderSingleTileObjectTiles(Graphics2D graphics, TileObject object, int radius, Stroke stroke)
     {
         WorldPoint base = object.getWorldLocation();
 
-        int minX = base.getX() - radius;
-        int minY = base.getY() - radius;
-        int maxX = base.getX() + radius;
-        int maxY = base.getY() + radius;
-
-        renderTileArea(graphics, minX, minY, maxX, maxY, base.getPlane(), stroke);
+        renderTileArea(
+                graphics,
+                base.getX() - radius,
+                base.getY() - radius,
+                base.getX() + radius,
+                base.getY() + radius,
+                base.getX(),
+                base.getY(),
+                base.getX(),
+                base.getY(),
+                1,
+                1,
+                base.getPlane(),
+                stroke
+        );
     }
 
-    private void renderTileArea(Graphics2D graphics, int minX, int minY, int maxX, int maxY, int plane, Stroke stroke)
+    private void renderTileArea(
+            Graphics2D graphics,
+            int minX,
+            int minY,
+            int maxX,
+            int maxY,
+            int objectMinX,
+            int objectMinY,
+            int objectMaxX,
+            int objectMaxY,
+            int objectWidth,
+            int objectHeight,
+            int plane,
+            Stroke stroke
+    )
     {
+        CoreRect core = getCoreRect(objectMinX, objectMinY, objectMaxX, objectMaxY);
+        boolean canFade = objectWidth >= 3 && objectHeight >= 3;
+        int maxDistance = getMaxDistanceFromCore(minX, minY, maxX, maxY, core);
+
         for (int x = minX; x <= maxX; x++)
         {
             for (int y = minY; y <= maxY; y++)
             {
-                WorldPoint worldPoint = new WorldPoint(x, y, plane);
-                LocalPoint localPoint = LocalPoint.fromWorld(client, worldPoint);
+                LocalPoint localPoint = LocalPoint.fromWorld(client, new WorldPoint(x, y, plane));
 
                 if (localPoint == null)
                 {
@@ -237,17 +278,112 @@ class ObjectIdMarkerOverlay extends Overlay
 
                 Polygon tilePoly = Perspective.getCanvasTilePoly(client, localPoint);
 
-                if (tilePoly != null)
+                if (tilePoly == null)
                 {
-                    OverlayUtil.renderPolygon(
-                            graphics,
-                            tilePoly,
-                            config.tileBorderColor(),
-                            config.tileFillColor(),
-                            stroke
-                    );
+                    continue;
                 }
+
+                int distanceFromCore = distanceFromRect(x, y, core.minX, core.minY, core.maxX, core.maxY);
+                int distanceFromObject = distanceFromRect(x, y, objectMinX, objectMinY, objectMaxX, objectMaxY);
+
+                Color fillColor;
+                if (canFade || distanceFromObject > 0)
+                {
+                    fillColor = getTileFillColor(distanceFromCore, maxDistance);
+                }
+                else
+                {
+                    fillColor = config.tileFillColor();
+                }
+
+                OverlayUtil.renderPolygon(
+                        graphics,
+                        tilePoly,
+                        config.tileBorderColor(),
+                        fillColor,
+                        stroke
+                );
             }
+        }
+    }
+
+    private Color getTileFillColor(int distanceFromCore, int maxDistance)
+    {
+        Color base = config.tileFillColor();
+
+        if (!config.fadeTileOpacity() || maxDistance <= 0 || distanceFromCore <= 0)
+        {
+            return base;
+        }
+
+        int effectiveMaxDistance = Math.max(maxDistance, 3);
+
+        double t = Math.min(1.0, distanceFromCore / (double) effectiveMaxDistance);
+        double alphaMultiplier = 1.0 - (0.5 * t);
+        int alpha = (int) Math.round(base.getAlpha() * alphaMultiplier);
+
+        return new Color(base.getRed(), base.getGreen(), base.getBlue(), alpha);
+    }
+
+    private int getMaxDistanceFromCore(int minX, int minY, int maxX, int maxY, CoreRect core)
+    {
+        int maxDistance = distanceFromRect(minX, minY, core.minX, core.minY, core.maxX, core.maxY);
+        maxDistance = Math.max(maxDistance, distanceFromRect(maxX, minY, core.minX, core.minY, core.maxX, core.maxY));
+        maxDistance = Math.max(maxDistance, distanceFromRect(minX, maxY, core.minX, core.minY, core.maxX, core.maxY));
+        maxDistance = Math.max(maxDistance, distanceFromRect(maxX, maxY, core.minX, core.minY, core.maxX, core.maxY));
+        return maxDistance;
+    }
+
+    private CoreRect getCoreRect(int minX, int minY, int maxX, int maxY)
+    {
+        return new CoreRect(
+                (minX + maxX) / 2,
+                (minY + maxY) / 2,
+                (minX + maxX + 1) / 2,
+                (minY + maxY + 1) / 2
+        );
+    }
+
+    private int distanceFromRect(int x, int y, int minX, int minY, int maxX, int maxY)
+    {
+        int dx = 0;
+
+        if (x < minX)
+        {
+            dx = minX - x;
+        }
+        else if (x > maxX)
+        {
+            dx = x - maxX;
+        }
+
+        int dy = 0;
+
+        if (y < minY)
+        {
+            dy = minY - y;
+        }
+        else if (y > maxY)
+        {
+            dy = y - maxY;
+        }
+
+        return Math.max(dx, dy);
+    }
+
+    private static class CoreRect
+    {
+        private final int minX;
+        private final int minY;
+        private final int maxX;
+        private final int maxY;
+
+        private CoreRect(int minX, int minY, int maxX, int maxY)
+        {
+            this.minX = minX;
+            this.minY = minY;
+            this.maxX = maxX;
+            this.maxY = maxY;
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.objectidmarker;
+package com.objectnamemarker;
 
 import com.google.inject.Provides;
 import java.util.HashMap;
@@ -9,6 +9,7 @@ import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
+import net.runelite.api.ObjectComposition;
 import net.runelite.api.Scene;
 import net.runelite.api.Tile;
 import net.runelite.api.TileObject;
@@ -21,6 +22,7 @@ import net.runelite.api.events.GroundObjectDespawned;
 import net.runelite.api.events.GroundObjectSpawned;
 import net.runelite.api.events.WallObjectDespawned;
 import net.runelite.api.events.WallObjectSpawned;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -29,44 +31,47 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 
 @PluginDescriptor(
-		name = "Object ID Marker",
-		description = "Highlight objects by configured object IDs",
-		tags = {"object", "marker", "highlight", "id", "tile"}
+		name = "Object Name Marker",
+		description = "Highlight objects by configured object names",
+		tags = {"object", "marker", "highlight", "name", "tile"}
 )
-public class ObjectIdMarkerPlugin extends Plugin
+public class ObjectNameMarkerPlugin extends Plugin
 {
-	private static final String CONFIG_GROUP = "objectidmarker";
+	private static final String CONFIG_GROUP = "objectnamemarker";
 
 	@Inject
 	private Client client;
 
 	@Inject
+	private ClientThread clientThread;
+
+	@Inject
 	private OverlayManager overlayManager;
 
 	@Inject
-	private ObjectIdMarkerOverlay overlay;
+	private ObjectNameMarkerOverlay overlay;
 
 	@Inject
-	private ObjectIdMarkerConfig config;
+	private ObjectNameMarkerConfig config;
 
 	private final Set<TileObject> objects = new HashSet<>();
 
-	private Set<Integer> hullObjectIds = new HashSet<>();
-	private Set<Integer> outlineObjectIds = new HashSet<>();
-	private Map<Integer, ObjectIdMarker> tileMarkers = new HashMap<>();
+	private Set<String> hullObjectNames = new HashSet<>();
+	private Set<String> outlineObjectNames = new HashSet<>();
+	private Map<String, ObjectNameMarker> tileMarkers = new HashMap<>();
 
 	@Provides
-	ObjectIdMarkerConfig provideConfig(ConfigManager configManager)
+	ObjectNameMarkerConfig provideConfig(ConfigManager configManager)
 	{
-		return configManager.getConfig(ObjectIdMarkerConfig.class);
+		return configManager.getConfig(ObjectNameMarkerConfig.class);
 	}
 
 	@Override
 	protected void startUp()
 	{
 		rebuildMarkers();
-		rebuildObjects();
 		overlayManager.add(overlay);
+		rebuildObjectsOnClientThread();
 	}
 
 	@Override
@@ -74,8 +79,8 @@ public class ObjectIdMarkerPlugin extends Plugin
 	{
 		overlayManager.remove(overlay);
 		objects.clear();
-		hullObjectIds.clear();
-		outlineObjectIds.clear();
+		hullObjectNames.clear();
+		outlineObjectNames.clear();
 		tileMarkers.clear();
 	}
 
@@ -84,19 +89,57 @@ public class ObjectIdMarkerPlugin extends Plugin
 		return objects;
 	}
 
-	Set<Integer> getHullObjectIds()
+	Set<String> getHullObjectNames()
 	{
-		return hullObjectIds;
+		return hullObjectNames;
 	}
 
-	Set<Integer> getOutlineObjectIds()
+	Set<String> getOutlineObjectNames()
 	{
-		return outlineObjectIds;
+		return outlineObjectNames;
 	}
 
-	Map<Integer, ObjectIdMarker> getTileMarkers()
+	Map<String, ObjectNameMarker> getTileMarkers()
 	{
 		return tileMarkers;
+	}
+
+	String getObjectName(TileObject object)
+	{
+		if (object == null)
+		{
+			return "";
+		}
+
+		ObjectComposition composition = client.getObjectDefinition(object.getId());
+
+		if (composition == null)
+		{
+			return "";
+		}
+
+		try
+		{
+			ObjectComposition impostor = composition.getImpostor();
+
+			if (impostor != null)
+			{
+				composition = impostor;
+			}
+		}
+		catch (RuntimeException ignored)
+		{
+			// Some objects do not have a valid impostor/transform state.
+		}
+
+		String name = composition.getName();
+
+		if (name == null || name.isEmpty() || "null".equalsIgnoreCase(name))
+		{
+			return "";
+		}
+
+		return ObjectNameMarkerParser.normalizeName(name);
 	}
 
 	@Subscribe
@@ -108,7 +151,7 @@ public class ObjectIdMarkerPlugin extends Plugin
 		}
 
 		rebuildMarkers();
-		rebuildObjects();
+		rebuildObjectsOnClientThread();
 	}
 
 	@Subscribe
@@ -120,7 +163,7 @@ public class ObjectIdMarkerPlugin extends Plugin
 		}
 		else if (event.getGameState() == GameState.LOGGED_IN)
 		{
-			rebuildObjects();
+			rebuildObjectsOnClientThread();
 		}
 	}
 
@@ -174,9 +217,14 @@ public class ObjectIdMarkerPlugin extends Plugin
 
 	private void rebuildMarkers()
 	{
-		hullObjectIds = ObjectIdMarkerParser.parseIds(config.hullObjectIds());
-		outlineObjectIds = ObjectIdMarkerParser.parseIds(config.outlineObjectIds());
-		tileMarkers = ObjectIdMarkerParser.parseTileMarkers(config.tileObjectIds());
+		hullObjectNames = ObjectNameMarkerParser.parseNames(config.hullObjectNames());
+		outlineObjectNames = ObjectNameMarkerParser.parseNames(config.outlineObjectNames());
+		tileMarkers = ObjectNameMarkerParser.parseTileMarkers(config.tileObjectNames());
+	}
+
+	private void rebuildObjectsOnClientThread()
+	{
+		clientThread.invokeLater(this::rebuildObjects);
 	}
 
 	private void rebuildObjects()
@@ -219,16 +267,16 @@ public class ObjectIdMarkerPlugin extends Plugin
 
 	private void checkObject(TileObject object)
 	{
-		if (object == null)
+		String objectName = getObjectName(object);
+
+		if (objectName.isEmpty())
 		{
 			return;
 		}
 
-		int objectId = object.getId();
-
-		if (hullObjectIds.contains(objectId)
-				|| outlineObjectIds.contains(objectId)
-				|| tileMarkers.containsKey(objectId))
+		if (hullObjectNames.contains(objectName)
+				|| outlineObjectNames.contains(objectName)
+				|| tileMarkers.containsKey(objectName))
 		{
 			objects.add(object);
 		}

@@ -1,6 +1,6 @@
-# Object ID Marker
+# Object Name Marker
 
-A RuneLite Plugin Hub plugin that highlights scene objects globally by object ID.
+A RuneLite plugin that highlights scene objects globally by object name.
 
 Supports:
 

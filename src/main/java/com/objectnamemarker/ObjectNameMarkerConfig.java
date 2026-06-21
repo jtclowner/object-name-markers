@@ -1,4 +1,4 @@
-package com.objectidmarker;
+package com.objectnamemarker;
 
 import java.awt.Color;
 import net.runelite.client.config.Alpha;
@@ -7,38 +7,38 @@ import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.Range;
 
-@ConfigGroup("objectidmarker")
-public interface ObjectIdMarkerConfig extends Config
+@ConfigGroup("objectnamemarker")
+public interface ObjectNameMarkerConfig extends Config
 {
 	@ConfigItem(
-			keyName = "hullObjectIds",
+			keyName = "hullObjectNames",
 			name = "Object hull highlight",
-			description = "Object IDs to render as filled convex hulls. Supports commas, new lines, and # comments.",
+			description = "Object names to render as filled convex hulls. Supports commas, new lines, and # comments.",
 			position = 0
 	)
-	default String hullObjectIds()
+	default String hullObjectNames()
 	{
 		return "";
 	}
 
 	@ConfigItem(
-			keyName = "outlineObjectIds",
+			keyName = "outlineObjectNames",
 			name = "Object outline highlight",
-			description = "Object IDs to render with model outlines. Supports commas, new lines, and # comments.",
+			description = "Object names to render with model outlines. Supports commas, new lines, and # comments.",
 			position = 1
 	)
-	default String outlineObjectIds()
+	default String outlineObjectNames()
 	{
 		return "";
 	}
 
 	@ConfigItem(
-			keyName = "tileObjectIds",
+			keyName = "tileObjectNames",
 			name = "Object tile highlight",
-			description = "Object IDs to render tile highlights for. Format: id or id:radius. Radius must be positive and expands outward.",
+			description = "Object names to render tile highlights for. Format: name or name:radius. Radius must be positive and expands outward.",
 			position = 2
 	)
-	default String tileObjectIds()
+	default String tileObjectNames()
 	{
 		return "";
 	}
@@ -52,7 +52,7 @@ public interface ObjectIdMarkerConfig extends Config
 	)
 	default Color hullColor()
 	{
-		return new Color(0, 255, 0);
+		return new Color(0, 255, 0, 128);
 	}
 
 	@Alpha
@@ -76,7 +76,7 @@ public interface ObjectIdMarkerConfig extends Config
 	)
 	default Color tileFillColor()
 	{
-		return new Color(0, 255, 0, 60);
+		return new Color(0, 255, 0, 128);
 	}
 
 	@Alpha
@@ -91,12 +91,23 @@ public interface ObjectIdMarkerConfig extends Config
 		return new Color(0, 255, 0, 0);
 	}
 
+	@ConfigItem(
+			keyName = "fadeTileOpacity",
+			name = "Fade tile opacity",
+			description = "Fade tile fill opacity from the centre/core outward.",
+			position = 7
+	)
+	default boolean fadeTileOpacity()
+	{
+		return false;
+	}
+
 	@Range(min = 1, max = 1000)
 	@ConfigItem(
 			keyName = "maxHighlightedObjects",
 			name = "Max highlighted objects",
 			description = "Safety limit for the number of matching objects rendered at once.",
-			position = 7
+			position = 8
 	)
 	default int maxHighlightedObjects()
 	{
@@ -108,7 +119,7 @@ public interface ObjectIdMarkerConfig extends Config
 			keyName = "renderDistance",
 			name = "Render distance",
 			description = "Only render matching objects within this many tiles.",
-			position = 8
+			position = 9
 	)
 	default int renderDistance()
 	{
