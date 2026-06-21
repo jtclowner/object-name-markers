@@ -31,7 +31,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 
 @PluginDescriptor(
-		name = "Object Name Marker",
+		name = "Object Name Markers",
 		description = "Highlight objects by configured object names",
 		tags = {"object", "marker", "highlight", "name", "tile"}
 )
