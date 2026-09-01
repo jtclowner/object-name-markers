@@ -148,8 +148,15 @@ public class ObjectNameMarkerPlugin extends Plugin
 			return;
 		}
 
-		rebuildMarkers();
-		rebuildObjectsOnClientThread();
+		switch (event.getKey())
+		{
+			case "hullObjectNames":
+			case "outlineObjectNames":
+			case "tileObjectNames":
+				rebuildMarkers();
+				rebuildObjectsOnClientThread();
+				break;
+		}
 	}
 
 	@Subscribe
@@ -158,10 +165,6 @@ public class ObjectNameMarkerPlugin extends Plugin
 		if (event.getGameState() == GameState.LOADING)
 		{
 			objects.clear();
-		}
-		else if (event.getGameState() == GameState.LOGGED_IN)
-		{
-			rebuildObjectsOnClientThread();
 		}
 	}
 
@@ -229,7 +232,7 @@ public class ObjectNameMarkerPlugin extends Plugin
 	{
 		objects.clear();
 
-		if (client.getGameState() != GameState.LOGGED_IN)
+		if (!hasConfiguredMarkers() || client.getGameState() != GameState.LOGGED_IN)
 		{
 			return;
 		}
@@ -265,6 +268,11 @@ public class ObjectNameMarkerPlugin extends Plugin
 
 	private void checkObject(TileObject object)
 	{
+		if (object == null || !hasConfiguredMarkers())
+		{
+			return;
+		}
+
 		String objectName = getObjectName(object);
 
 		if (objectName.isEmpty())
@@ -278,5 +286,12 @@ public class ObjectNameMarkerPlugin extends Plugin
 		{
 			objects.add(object);
 		}
+	}
+
+	private boolean hasConfiguredMarkers()
+	{
+		return !hullObjectNames.isEmpty()
+				|| !outlineObjectNames.isEmpty()
+				|| !tileObjectNames.isEmpty();
 	}
 }
