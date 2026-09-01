@@ -1,9 +1,7 @@
 package com.objectnamemarker;
 
 import com.google.inject.Provides;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
 import net.runelite.api.Client;
@@ -58,7 +56,7 @@ public class ObjectNameMarkerPlugin extends Plugin
 
 	private Set<String> hullObjectNames = new HashSet<>();
 	private Set<String> outlineObjectNames = new HashSet<>();
-	private Map<String, ObjectNameMarker> tileMarkers = new HashMap<>();
+	private Set<String> tileObjectNames = new HashSet<>();
 
 	@Provides
 	ObjectNameMarkerConfig provideConfig(ConfigManager configManager)
@@ -81,7 +79,7 @@ public class ObjectNameMarkerPlugin extends Plugin
 		objects.clear();
 		hullObjectNames.clear();
 		outlineObjectNames.clear();
-		tileMarkers.clear();
+		tileObjectNames.clear();
 	}
 
 	Set<TileObject> getObjects()
@@ -99,9 +97,9 @@ public class ObjectNameMarkerPlugin extends Plugin
 		return outlineObjectNames;
 	}
 
-	Map<String, ObjectNameMarker> getTileMarkers()
+	Set<String> getTileObjectNames()
 	{
-		return tileMarkers;
+		return tileObjectNames;
 	}
 
 	String getObjectName(TileObject object)
@@ -219,7 +217,7 @@ public class ObjectNameMarkerPlugin extends Plugin
 	{
 		hullObjectNames = ObjectNameMarkerParser.parseNames(config.hullObjectNames());
 		outlineObjectNames = ObjectNameMarkerParser.parseNames(config.outlineObjectNames());
-		tileMarkers = ObjectNameMarkerParser.parseTileMarkers(config.tileObjectNames());
+		tileObjectNames = ObjectNameMarkerParser.parseTileNames(config.tileObjectNames());
 	}
 
 	private void rebuildObjectsOnClientThread()
@@ -276,7 +274,7 @@ public class ObjectNameMarkerPlugin extends Plugin
 
 		if (hullObjectNames.contains(objectName)
 				|| outlineObjectNames.contains(objectName)
-				|| tileMarkers.containsKey(objectName))
+				|| tileObjectNames.contains(objectName))
 		{
 			objects.add(object);
 		}

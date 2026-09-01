@@ -1,12 +1,13 @@
 package com.objectnamemarker;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 class ObjectNameMarkerParser
 {
+    private static final Pattern LEGACY_TILE_SUFFIX = Pattern.compile("[1-9]\\d*");
+
     static Set<String> parseNames(String input)
     {
         Set<String> names = new HashSet<>();
@@ -24,46 +25,32 @@ class ObjectNameMarkerParser
         return names;
     }
 
-    static Map<String, ObjectNameMarker> parseTileMarkers(String input)
+    static Set<String> parseTileNames(String input)
     {
-        Map<String, ObjectNameMarker> markers = new HashMap<>();
+        Set<String> names = new HashSet<>();
 
         for (String token : tokens(input))
         {
             String name = token;
-            Integer radius = null;
+            int separator = token.lastIndexOf(":");
 
-            int radiusSeparator = token.lastIndexOf(":");
-            if (radiusSeparator >= 0)
+            // Keep legacy name:<positive number> configs working after tile expansion was removed.
+            // The number is accepted for compatibility only and never affects rendering.
+            if (separator >= 0
+                    && LEGACY_TILE_SUFFIX.matcher(token.substring(separator + 1).trim()).matches())
             {
-                String possibleName = token.substring(0, radiusSeparator).trim();
-                String possibleRadius = token.substring(radiusSeparator + 1).trim();
-
-                try
-                {
-                    int parsedRadius = Integer.parseInt(possibleRadius);
-
-                    if (parsedRadius > 0)
-                    {
-                        name = possibleName;
-                        radius = parsedRadius;
-                    }
-                }
-                catch (NumberFormatException ignored)
-                {
-                    // Treat the whole token as a name if the suffix is not a valid radius.
-                }
+                name = token.substring(0, separator);
             }
 
             String normalizedName = normalizeName(name);
 
             if (!normalizedName.isEmpty())
             {
-                markers.put(normalizedName, new ObjectNameMarker(radius));
+                names.add(normalizedName);
             }
         }
 
-        return markers;
+        return names;
     }
 
     static String normalizeName(String name)

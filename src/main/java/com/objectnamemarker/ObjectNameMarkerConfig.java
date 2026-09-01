@@ -35,7 +35,7 @@ public interface ObjectNameMarkerConfig extends Config
 	@ConfigItem(
 			keyName = "tileObjectNames",
 			name = "Object tile highlight",
-			description = "Object names to render tile highlights for. Format: name or name:radius. Radius must be positive and expands outward.",
+			description = "Object names to render tile highlights for. Supports commas, new lines, and # comments.",
 			position = 2
 	)
 	default String tileObjectNames()

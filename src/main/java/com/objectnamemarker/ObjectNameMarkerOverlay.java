@@ -104,11 +104,9 @@ class ObjectNameMarkerOverlay extends Overlay
                 renderedSomething = true;
             }
 
-            ObjectNameMarker tileMarker = plugin.getTileMarkers().get(objectName);
-            if (tileMarker != null)
+            if (plugin.getTileObjectNames().contains(objectName))
             {
-                int radius = tileMarker.getRadius() == null ? 0 : tileMarker.getRadius();
-                renderTiles(graphics, object, radius, stroke);
+                renderTiles(graphics, object, stroke);
                 renderedSomething = true;
             }
 
@@ -184,18 +182,18 @@ class ObjectNameMarkerOverlay extends Overlay
         return null;
     }
 
-    private void renderTiles(Graphics2D graphics, TileObject object, int radius, Stroke stroke)
+    private void renderTiles(Graphics2D graphics, TileObject object, Stroke stroke)
     {
         if (object instanceof GameObject)
         {
-            renderGameObjectTiles(graphics, (GameObject) object, radius, stroke);
+            renderGameObjectTiles(graphics, (GameObject) object, stroke);
             return;
         }
 
-        renderSingleTileObjectTiles(graphics, object, radius, stroke);
+        renderSingleTileObjectTiles(graphics, object, stroke);
     }
 
-    private void renderGameObjectTiles(Graphics2D graphics, GameObject object, int radius, Stroke stroke)
+    private void renderGameObjectTiles(Graphics2D graphics, GameObject object, Stroke stroke)
     {
         WorldPoint base = WorldPoint.fromScene(
                 client,
@@ -211,10 +209,6 @@ class ObjectNameMarkerOverlay extends Overlay
 
         renderTileArea(
                 graphics,
-                objectMinX - radius,
-                objectMinY - radius,
-                objectMaxX + radius,
-                objectMaxY + radius,
                 objectMinX,
                 objectMinY,
                 objectMaxX,
@@ -226,16 +220,12 @@ class ObjectNameMarkerOverlay extends Overlay
         );
     }
 
-    private void renderSingleTileObjectTiles(Graphics2D graphics, TileObject object, int radius, Stroke stroke)
+    private void renderSingleTileObjectTiles(Graphics2D graphics, TileObject object, Stroke stroke)
     {
         WorldPoint base = object.getWorldLocation();
 
         renderTileArea(
                 graphics,
-                base.getX() - radius,
-                base.getY() - radius,
-                base.getX() + radius,
-                base.getY() + radius,
                 base.getX(),
                 base.getY(),
                 base.getX(),
@@ -253,17 +243,13 @@ class ObjectNameMarkerOverlay extends Overlay
             int minY,
             int maxX,
             int maxY,
-            int objectMinX,
-            int objectMinY,
-            int objectMaxX,
-            int objectMaxY,
             int objectWidth,
             int objectHeight,
             int plane,
             Stroke stroke
     )
     {
-        CoreRect core = getCoreRect(objectMinX, objectMinY, objectMaxX, objectMaxY);
+        CoreRect core = getCoreRect(minX, minY, maxX, maxY);
         boolean canFade = objectWidth >= 3 && objectHeight >= 3;
         int maxDistance = getMaxDistanceFromCore(minX, minY, maxX, maxY, core);
 
@@ -286,10 +272,8 @@ class ObjectNameMarkerOverlay extends Overlay
                 }
 
                 int distanceFromCore = distanceFromRect(x, y, core.minX, core.minY, core.maxX, core.maxY);
-                int distanceFromObject = distanceFromRect(x, y, objectMinX, objectMinY, objectMaxX, objectMaxY);
-
                 Color fillColor;
-                if (canFade || distanceFromObject > 0)
+                if (canFade)
                 {
                     fillColor = getTileFillColor(distanceFromCore, maxDistance);
                 }
