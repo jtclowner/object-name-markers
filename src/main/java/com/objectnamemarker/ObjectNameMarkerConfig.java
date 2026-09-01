@@ -52,7 +52,7 @@ public interface ObjectNameMarkerConfig extends Config
 	)
 	default Color hullColor()
 	{
-		return new Color(0, 255, 0, 128);
+		return new Color(0, 255, 0, 50);
 	}
 
 	@Alpha
@@ -76,7 +76,7 @@ public interface ObjectNameMarkerConfig extends Config
 	)
 	default Color tileFillColor()
 	{
-		return new Color(0, 255, 0, 128);
+		return new Color(0, 255, 0, 50);
 	}
 
 	@Alpha
@@ -91,11 +91,23 @@ public interface ObjectNameMarkerConfig extends Config
 		return new Color(0, 255, 0, 0);
 	}
 
+	@Range(min = 1)
+	@ConfigItem(
+			keyName = "borderThickness",
+			name = "Border width",
+			description = "Width of hull and tile highlight borders.",
+			position = 7
+	)
+	default int borderThickness()
+	{
+		return 1;
+	}
+
 	@ConfigItem(
 			keyName = "fadeTileOpacity",
 			name = "Fade tile opacity",
 			description = "Fade tile fill opacity from the centre/core outward.",
-			position = 7
+			position = 8
 	)
 	default boolean fadeTileOpacity()
 	{
@@ -107,7 +119,7 @@ public interface ObjectNameMarkerConfig extends Config
 			keyName = "maxHighlightedObjects",
 			name = "Max highlighted objects",
 			description = "Safety limit for the number of matching objects rendered at once.",
-			position = 8
+			position = 9
 	)
 	default int maxHighlightedObjects()
 	{
@@ -119,7 +131,7 @@ public interface ObjectNameMarkerConfig extends Config
 			keyName = "renderDistance",
 			name = "Render distance",
 			description = "Only render matching objects within this many tiles.",
-			position = 9
+			position = 10
 	)
 	default int renderDistance()
 	{

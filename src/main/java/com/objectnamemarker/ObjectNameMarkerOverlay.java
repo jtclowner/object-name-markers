@@ -66,7 +66,7 @@ class ObjectNameMarkerOverlay extends Overlay
         }
 
         WorldPoint playerLocation = localPlayer.getWorldLocation();
-        Stroke stroke = new BasicStroke(1);
+        Stroke stroke = new BasicStroke(config.borderThickness());
         List<TileObject> objects = new ArrayList<>(plugin.getObjects());
         objects.sort(Comparator.comparingInt(object -> object.getWorldLocation().distanceTo(playerLocation)));
         int rendered = 0;
